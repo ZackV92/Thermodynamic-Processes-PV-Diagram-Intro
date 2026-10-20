@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A gas under a stack of weights</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #edf1f5;
+    --panel: #ffffff;
+    --ink: #18222e;
+    --muted: #5f6c7a;
+    --line: #d3dbe3;
+    --grid: #e4e9ee;
+    --accent: #1f5fa8;
+    --accent-ink: #ffffff;
+    --focus: #1f5fa8;
+    --gas-hot: #f9dcc0;
+    --gas-cold: #d2e6fa;
+    --particle: #1f6f9f;
+    --wall: #8a8f98;
+    --hatch: #4a505a;
+    --cyl-bg: #f7f9fb;
+    --piston: #cfb47f;
+    --piston-edge: #7d6435;
+    --weight: #3b3f47;
+    --weight-edge: #171a1f;
+    --weight-hi: #5b606a;
+    --merc-hot: #d9412a;
+    --merc-cold: #2d6fd1;
+    --glass: #9aa3ad;
+    --path: #7a3fb3;
+    --rev: #2f8a4a;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #11161c;
+      --panel: #182028;
+      --ink: #e6ecf2;
+      --muted: #93a0ad;
+      --line: #2a3542;
+      --grid: #263039;
+      --accent: #7fb6ff;
+      --accent-ink: #0c1420;
+      --focus: #7fb6ff;
+      --gas-hot: #4a3626;
+      --gas-cold: #1f3449;
+      --particle: #8cd0f5;
+      --wall: #4e5662;
+      --hatch: #8a93a0;
+      --cyl-bg: #0d1217;
+      --piston: #b89a62;
+      --piston-edge: #ead7a9;
+      --weight: #30353d;
+      --weight-edge: #7c8591;
+      --weight-hi: #4a515b;
+      --merc-hot: #ff6a4f;
+      --merc-cold: #6aa6ff;
+      --glass: #6c7682;
+      --path: #c08cf0;
+      --rev: #7bd38f;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11161c;
+    --panel: #182028;
+    --ink: #e6ecf2;
+    --muted: #93a0ad;
+    --line: #2a3542;
+    --grid: #263039;
+    --accent: #7fb6ff;
+    --accent-ink: #0c1420;
+    --focus: #7fb6ff;
+    --gas-hot: #4a3626;
+    --gas-cold: #1f3449;
+    --particle: #8cd0f5;
+    --wall: #4e5662;
+    --hatch: #8a93a0;
+    --cyl-bg: #0d1217;
+    --piston: #b89a62;
+    --piston-edge: #ead7a9;
+    --weight: #30353d;
+    --weight-edge: #7c8591;
+    --weight-hi: #4a515b;
+    --merc-hot: #ff6a4f;
+    --merc-cold: #6aa6ff;
+    --glass: #6c7682;
+    --path: #c08cf0;
+    --rev: #7bd38f;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 18px 16px 44px; }
+  h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 10px; line-height: 1.2; }
+
+  .tabs { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid var(--line); }
+  .tabs button {
+    appearance: none; background: transparent; border: 0; border-bottom: 3px solid transparent;
+    margin-bottom: -1px; padding: 8px 10px 9px; font: inherit; font-weight: 700;
+    color: var(--muted); cursor: pointer; touch-action: manipulation;
+  }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .lede { margin: 0 0 12px; color: var(--muted); font-size: 0.95rem; max-width: 60ch; }
+  [hidden] { display: none !important; }
+
+  .layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 760px) {
+    .layout { grid-template-columns: minmax(0, 11fr) minmax(0, 13fr); align-items: start; }
+  }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 8px; }
+  canvas { display: block; width: 100%; height: auto; }
+  .rig { aspect-ratio: 400 / 440; }
+  .pv { aspect-ratio: 400 / 250; }
+  .caption { margin: 8px 4px 2px; font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+
+  .side { display: grid; gap: 14px; }
+  .readouts { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; }
+  .readouts-inner { display: grid; margin: -1px 0 0 -1px; }
+  .n4 .readouts-inner { grid-template-columns: repeat(4, 1fr); }
+  .n5 .readouts-inner { grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 480px) {
+    .n4 .readouts-inner { grid-template-columns: repeat(2, 1fr); }
+    .n5 .readouts-inner { grid-template-columns: repeat(3, 1fr); }
+  }
+  .ro { min-width: 0; padding: 8px 8px 8px 10px; border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
+  .ro .lbl { font-size: 0.8rem; color: var(--muted); }
+  .ro .val { font-size: 1.35rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+  .ro .val small { font-size: 0.8rem; font-weight: 400; color: var(--muted); margin-left: 3px; }
+
+  .controls { display: grid; gap: 10px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .lab { font-size: 0.9rem; color: var(--muted); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  .seg button {
+    appearance: none; border: 0; border-left: 1px solid var(--line);
+    background: transparent; color: var(--ink);
+    font: inherit; font-weight: 700; padding: 7px 0; min-width: 42px;
+    cursor: pointer; touch-action: manipulation;
+  }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    font: inherit; font-weight: 700; padding: 9px 16px; border-radius: 8px;
+    cursor: pointer; touch-action: manipulation;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; min-width: 92px; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .status { margin: 0; font-size: 0.95rem; min-height: 2.8em; }
+  .note { margin: 0 2px; font-size: 0.88rem; color: var(--muted); max-width: 62ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>A gas under a stack of weights</h1>
+
+  <div class="tabs" role="tablist" aria-label="Choose a cylinder">
+    <button type="button" role="tab" id="tab-insulated" aria-controls="insulated" aria-selected="true">Insulated cylinder</button>
+    <button type="button" role="tab" id="tab-constant" aria-controls="constant-temperature" aria-selected="false">Constant temperature</button>
+  </div>
+
+  <!-- ===================== Insulated cylinder ===================== -->
+  <section id="insulated" role="tabpanel" aria-labelledby="tab-insulated" data-mode="insulated">
+    <p class="lede">Lift the weights off one at a time. The gas pushes the piston up, does work, and cools.</p>
+    <div class="layout">
+      <div class="panel">
+        <canvas class="rig" aria-label="Insulated cylinder with a piston, a stack of weights on top, moving gas particles, and a thermometer"></canvas>
+        <p class="caption">Insulated cylinder, ideal monatomic gas (so U = (3/2)nRT), massless frictionless piston. Particle speeds scale with √T.</p>
+      </div>
+      <div class="side">
+        <div class="readouts n4" aria-label="Current state of the gas"><div class="readouts-inner">
+          <div class="ro"><div class="lbl">Temperature</div><div class="val"><span data-ro="T">300.0</span><small>K</small></div></div>
+          <div class="ro"><div class="lbl">Pressure</div><div class="val"><span data-ro="P">2.00</span><small>atm</small></div></div>
+          <div class="ro"><div class="lbl">Volume</div><div class="val"><span data-ro="V">1.00</span><small>L</small></div></div>
+          <div class="ro"><div class="lbl">Work by gas</div><div class="val"><span data-ro="W">0</span><small>J</small></div></div>
+        </div></div>
+        <div class="controls">
+          <div class="row">
+            <span class="lab" id="segLabel1">Split the same total mass into</span>
+            <div class="seg" role="group" aria-labelledby="segLabel1">
+              <button type="button" data-n="1" aria-pressed="false">1</button>
+              <button type="button" data-n="2" aria-pressed="false">2</button>
+              <button type="button" data-n="4" aria-pressed="true">4</button>
+              <button type="button" data-n="8" aria-pressed="false">8</button>
+              <button type="button" data-n="16" aria-pressed="false">16</button>
+            </div>
+            <span class="lab">weights</span>
+          </div>
+          <div class="row">
+            <button type="button" class="btn primary" data-act="play">Play</button>
+            <button type="button" class="btn" data-act="remove">Remove a weight</button>
+            <button type="button" class="btn" data-act="reset">Reset</button>
+            <span class="lab" data-ro="N">4 on the piston</span>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+        <div class="panel">
+          <canvas class="pv" aria-label="Pressure versus volume diagram of the stepwise expansion, with the many-tiny-weights limit shown dashed"></canvas>
+          <p class="caption">Dotted drops: the pressure on the piston falls the instant a weight comes off. Solid runs: the gas expands against that constant pressure. Dashed curve: where the gas would go if the same mass came off as many tiny weights.</p>
+        </div>
+        <p class="note">Every setting starts at 2.00 atm and ends at 1.00 atm. Fewer, heavier weights mean the gas does less work as it expands, so it ends up warmer. With infinitely many tiny weights the temperature falls all the way to the dashed mark on the thermometer.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Constant temperature ===================== -->
+  <section id="constant-temperature" role="tabpanel" aria-labelledby="tab-constant" data-mode="isothermal" hidden>
+    <p class="lede">Lift the weights off or put them back. The reservoir underneath keeps the gas at 300 K the whole time.</p>
+    <div class="layout">
+      <div class="panel">
+        <canvas class="rig" aria-label="Conducting cylinder on a heat reservoir, with a piston, a stack of weights on top, moving gas particles, heat-flow arrows, and a thermometer"></canvas>
+        <p class="caption">Conducting cylinder sitting on a large reservoir at 300 K, ideal gas, massless frictionless piston. The particles keep the same speeds because the temperature never changes.</p>
+      </div>
+      <div class="side">
+        <div class="readouts n5" aria-label="Current state of the gas"><div class="readouts-inner">
+          <div class="ro"><div class="lbl">Temperature</div><div class="val"><span data-ro="T">300.0</span><small>K</small></div></div>
+          <div class="ro"><div class="lbl">Pressure</div><div class="val"><span data-ro="P">2.00</span><small>atm</small></div></div>
+          <div class="ro"><div class="lbl">Volume</div><div class="val"><span data-ro="V">1.00</span><small>L</small></div></div>
+          <div class="ro"><div class="lbl">Work by gas</div><div class="val"><span data-ro="W">0</span><small>J</small></div></div>
+          <div class="ro"><div class="lbl">Heat into gas</div><div class="val"><span data-ro="Q">0</span><small>J</small></div></div>
+        </div></div>
+        <div class="controls">
+          <div class="row">
+            <span class="lab" id="segLabel2">Split the same total mass into</span>
+            <div class="seg" role="group" aria-labelledby="segLabel2">
+              <button type="button" data-n="1" aria-pressed="false">1</button>
+              <button type="button" data-n="2" aria-pressed="false">2</button>
+              <button type="button" data-n="4" aria-pressed="true">4</button>
+              <button type="button" data-n="8" aria-pressed="false">8</button>
+              <button type="button" data-n="16" aria-pressed="false">16</button>
+            </div>
+            <span class="lab">weights</span>
+          </div>
+          <div class="row">
+            <button type="button" class="btn primary" data-act="play">Play</button>
+            <button type="button" class="btn" data-act="remove">Remove a weight</button>
+            <button type="button" class="btn" data-act="add">Add a weight</button>
+            <button type="button" class="btn" data-act="reset">Reset</button>
+            <span class="lab" data-ro="N">4 on the piston</span>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+        <div class="panel">
+          <canvas class="pv" aria-label="Pressure versus volume diagram of the stepwise expansion and compression at constant temperature, with the many-tiny-weights limit shown dashed"></canvas>
+          <p class="caption">Dotted jumps: the pressure on the piston changes the instant a weight comes off or goes on. Solid runs: the gas expands or is squeezed against that constant pressure. Dashed curve: the path for many tiny weights, where PV stays constant because T does.</p>
+        </div>
+        <p class="note">Because T never changes, the internal energy of the gas never changes, so the heat that flows in or out always equals the work the gas does. Lifting the weights off and putting them all back returns the gas to its starting state, but the work and heat readouts do not return to zero: pushing the piston back down takes more work than the gas gave up on the way out, and the difference leaves as heat.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- shared constants ----------
+  const GAMMA = 5 / 3;            // monatomic ideal gas, U = (3/2) nRT
+  const P_ATM = 1.0;              // atm
+  const P0 = 2.0;                 // atm with every weight on the piston
+  const T0 = 300;                 // K
+  const V0 = 1.0;                 // L
+  const ATM_L_J = 101.325;        // joules per atm·L
+  const T_LIM = T0 * Math.pow(P_ATM / P0, (GAMMA - 1) / GAMMA); // insulated, many tiny weights
+  const V_LIM = V0 * (T_LIM / T0) * (P0 / P_ATM);
+
+  // ---------- geometry (logical units) ----------
+  const RW = 400, RH = 440, PW = 400, PH = 250;
+  const CYL = { x: 46, w: 184, top: 40, bottom: 380, wall: 10 };
+  const H0 = 140, PIST_H = 14, STACK_H = 72, WEIGHT_W = 124;
+  const TH = { x: 298, w: 14, top: 72, bottom: 338, bulbR: 17, tmin: 200, tmax: 320 };
+  const NP = 56, PR = 3;
+  const FONT = '"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif';
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function pistonY(V) { return CYL.bottom - H0 * (V / V0); }
+  function tempY(T) { return TH.bottom - (T - TH.tmin) / (TH.tmax - TH.tmin) * (TH.bottom - TH.top); }
+
+  // ---------- theme tokens ----------
+  const TOKEN_NAMES = ['panel', 'ink', 'muted', 'line', 'grid', 'gas-hot', 'gas-cold', 'particle',
+    'wall', 'hatch', 'cyl-bg', 'piston', 'piston-edge', 'weight', 'weight-edge', 'weight-hi',
+    'merc-hot', 'merc-cold', 'glass', 'path', 'rev'];
+  const tok = {};
+  function readTokens() {
+    const cs = getComputedStyle(document.documentElement);
+    for (let i = 0; i < TOKEN_NAMES.length; i++) {
+      tok[TOKEN_NAMES[i]] = cs.getPropertyValue('--' + TOKEN_NAMES[i]).trim();
+    }
+  }
+  function hexRgb(h) {
+    h = (h || '').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const n = parseInt(h, 16);
+    if (isNaN(n)) return [128, 128, 128];
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function mix(a, b, t) {
+    const A = hexRgb(a), B = hexRgb(b);
+    return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * t) + ',' +
+      Math.round(A[1] + (B[1] - A[1]) * t) + ',' +
+      Math.round(A[2] + (B[2] - A[2]) * t) + ')';
+  }
+
+  // ---------- canvas helpers ----------
+  let dpr = 1;
+  function fit(canvas, lw, lh) {
+    const w = Math.max(1, Math.round(canvas.clientWidth || lw));
+    const h = Math.max(1, Math.round(w * lh / lw));
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const cw = Math.round(w * dpr), ch = Math.round(h * dpr);
+    if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+    return w / lw;
+  }
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
+  }
+  function hatchRect(c, x, y, w, h) {
+    c.save();
+    c.beginPath(); c.rect(x, y, w, h); c.clip();
+    c.fillStyle = tok.wall; c.fillRect(x, y, w, h);
+    c.strokeStyle = tok.hatch; c.lineWidth = 1.2; c.globalAlpha = 0.9;
+    c.beginPath();
+    for (let d = -h; d < w + h; d += 6) { c.moveTo(x + d, y + h); c.lineTo(x + d + h, y); }
+    c.stroke();
+    c.restore();
+  }
+  function plainRect(c, x, y, w, h) {
+    c.fillStyle = tok.wall; c.fillRect(x, y, w, h);
+    c.save(); c.globalAlpha = 0.5; c.strokeStyle = tok.hatch; c.lineWidth = 1;
+    c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); c.restore();
+  }
+  function drawWeight(c, x, y, w, h, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.fillStyle = tok.weight; c.fillRect(x, y, w, h);
+    if (h >= 7) { c.fillStyle = tok['weight-hi']; c.fillRect(x + 2, y + 1, w - 4, Math.max(1, h * 0.22)); }
+    c.strokeStyle = tok['weight-edge']; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    c.restore();
+  }
+
+  // ---------- one simulation (one tab) ----------
+  function makeSim(root, mode) {
+    const iso = mode === 'isothermal';
+    const rig = root.querySelector('.rig'), rctx = rig.getContext('2d');
+    const pv = root.querySelector('.pv'), pctx = pv.getContext('2d');
+    const ro = {};
+    root.querySelectorAll('[data-ro]').forEach(function (el) { ro[el.getAttribute('data-ro')] = el; });
+    const statusEl = root.querySelector('.status');
+    const btnPlay = root.querySelector('[data-act="play"]');
+    const btnRemove = root.querySelector('[data-act="remove"]');
+    const btnAdd = root.querySelector('[data-act="add"]');
+    const btnReset = root.querySelector('[data-act="reset"]');
+    const segBtns = Array.prototype.slice.call(root.querySelectorAll('.seg button'));
+
+    const PVG = { l: 48, r: 14, t: 16, b: 38, vmin: 0.9, vmax: iso ? 2.1 : 1.7, vlast: iso ? 2.0 : 1.6, pmin: 0.8, pmax: 2.2 };
+    function vx(V) { return PVG.l + (V - PVG.vmin) / (PVG.vmax - PVG.vmin) * (PW - PVG.l - PVG.r); }
+    function pyy(P) { return PH - PVG.b - (P - PVG.pmin) / (PVG.pmax - PVG.pmin) * (PH - PVG.t - PVG.b); }
+    // Where the gas would go if the same mass came off as infinitely many tiny weights.
+    function refCurve(V) { return iso ? P0 * V0 / V : P0 * Math.pow(V0 / V, GAMMA); }
+    const refVend = iso ? P0 * V0 / P_ATM : V_LIM;
+
+    // ----- state -----
+    let N = 4, states = null, k = 0, cur = null, anim = null;
+    let playing = false, playDir = 1, playTimer = null;
+    let steps = [], Wcum = 0, Wbase = 0, lastDir = 1, parts = [];
+
+    // Insulated cylinder: removing a weight drops the pressure on the piston to P;
+    // the gas expands against that constant pressure with no heat flow, so
+    // n*Cv*(T1 - T0) = -P*(V1 - V0). With PV = nRT this gives
+    // T1 = T0 * [1/gamma + (1 - 1/gamma) * (P1/P0)].
+    function computeStates(n) {
+      const s = [{ P: P0, T: T0, V: V0 }];
+      for (let i = 1; i <= n; i++) {
+        const prev = s[i - 1];
+        const P = P_ATM + (n - i) / n;
+        const T = prev.T * (1 / GAMMA + (1 - 1 / GAMMA) * (P / prev.P));
+        s.push({ P: P, T: T, V: V0 * (T / T0) * (P0 / P) });
+      }
+      return s;
+    }
+    // Constant temperature: the reservoir holds T at T0, so V = P0*V0/P.
+    function stateAt(kk) {
+      if (iso) { const P = P_ATM + (N - kk) / N; return { P: P, T: T0, V: P0 * V0 / P }; }
+      return states[kk];
+    }
+    function warmth() { return clamp((cur.T - 220) / (T0 - 220), 0, 1); }
+
+    // ----- particles -----
+    function initParts() {
+      parts = [];
+      const py = pistonY(cur.V);
+      for (let i = 0; i < NP; i++) {
+        const a = Math.random() * Math.PI * 2;
+        parts.push({
+          x: CYL.x + PR + Math.random() * (CYL.w - 2 * PR),
+          y: py + PR + Math.random() * (CYL.bottom - py - 2 * PR),
+          dx: Math.cos(a), dy: Math.sin(a),
+          s: 55 + Math.random() * 75
+        });
+      }
+    }
+    function stepParts(dt) {
+      const py = pistonY(cur.V);
+      const f = reduceMotion ? 0 : Math.sqrt(cur.T / T0);
+      const x0 = CYL.x + PR, x1 = CYL.x + CYL.w - PR, y0 = py + PR, y1 = CYL.bottom - PR;
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i], v = p.s * f;
+        p.x += p.dx * v * dt; p.y += p.dy * v * dt;
+        if (p.x < x0) { p.x = x0 + (x0 - p.x); p.dx = Math.abs(p.dx); }
+        else if (p.x > x1) { p.x = x1 - (p.x - x1); p.dx = -Math.abs(p.dx); }
+        if (p.y < y0) { p.y = y0 + (y0 - p.y); p.dy = Math.abs(p.dy); }
+        else if (p.y > y1) { p.y = y1 - (p.y - y1); p.dy = -Math.abs(p.dy); }
+        p.x = clamp(p.x, x0, x1); p.y = clamp(p.y, y0, y1);
+      }
+    }
+
+    // ----- apparatus -----
+    function drawRig(now) {
+      const s = fit(rig, RW, RH);
+      const c = rctx;
+      c.setTransform(dpr * s, 0, 0, dpr * s, 0, 0);
+      c.clearRect(0, 0, RW, RH);
+      const py = pistonY(cur.V), pTop = py - PIST_H;
+
+      c.fillStyle = tok['cyl-bg'];
+      c.fillRect(CYL.x, CYL.top - 6, CYL.w, CYL.bottom - CYL.top + 6);
+      c.fillStyle = mix(tok['gas-cold'], tok['gas-hot'], warmth());
+      c.fillRect(CYL.x, py, CYL.w, CYL.bottom - py);
+
+      c.font = '10px ' + FONT; c.fillStyle = tok.muted; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.fillText('atmosphere, 1.00 atm', CYL.x + CYL.w / 2, CYL.top + 14);
+
+      c.fillStyle = tok.particle;
+      for (let i = 0; i < parts.length; i++) {
+        c.beginPath(); c.arc(parts[i].x, parts[i].y, PR, 0, Math.PI * 2); c.fill();
+      }
+
+      const wallH = CYL.bottom - CYL.top + 6 + CYL.wall;
+      const wallFn = iso ? plainRect : hatchRect;
+      wallFn(c, CYL.x - CYL.wall, CYL.top - 6, CYL.wall, wallH);
+      wallFn(c, CYL.x + CYL.w, CYL.top - 6, CYL.wall, wallH);
+      wallFn(c, CYL.x - CYL.wall, CYL.bottom, CYL.w + 2 * CYL.wall, CYL.wall);
+      if (iso) drawReservoir(c);
+
+      // piston
+      c.fillStyle = tok.piston; c.fillRect(CYL.x, pTop, CYL.w, PIST_H);
+      c.strokeStyle = tok['piston-edge']; c.lineWidth = 1.5;
+      c.strokeRect(CYL.x + 0.75, pTop + 0.75, CYL.w - 1.5, PIST_H - 1.5);
+      c.globalAlpha = 0.45; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(CYL.x + 6, pTop + PIST_H / 2 + 0.5); c.lineTo(CYL.x + CYL.w - 6, pTop + PIST_H / 2 + 0.5); c.stroke();
+      c.globalAlpha = 1;
+
+      // weights on the piston, plus the one arriving or leaving
+      const wh = STACK_H / N, wx = CYL.x + (CYL.w - WEIGHT_W) / 2;
+      let onPiston = N - k, tf = 1;
+      if (anim) {
+        tf = clamp((now - anim.flyStart) / anim.flyDur, 0, 1);
+        if (anim.dir < 0 && tf < 1) onPiston -= 1;
+      }
+      for (let i = 0; i < onPiston; i++) drawWeight(c, wx, pTop - (i + 1) * wh, WEIGHT_W, wh, 1);
+      if (anim && tf < 1) {
+        const e = easeOut(tf);
+        const y0 = anim.flyTop - (anim.fly + 1) * wh;
+        if (anim.dir > 0) drawWeight(c, wx - 120 * e, y0 - 50 * e, WEIGHT_W, wh, 1 - tf);
+        else drawWeight(c, wx - 120 * (1 - e), y0 - 50 * (1 - e), WEIGHT_W, wh, tf);
+      }
+
+      if (iso) drawHeatArrows(c, now);
+      drawThermo(c);
+    }
+
+    function drawReservoir(c) {
+      const x0 = CYL.x - CYL.wall - 12, x1 = CYL.x + CYL.w + CYL.wall + 12;
+      const y0 = CYL.bottom + CYL.wall, y1 = y0 + 40;
+      c.fillStyle = tok['gas-hot']; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+      c.strokeStyle = tok.glass; c.lineWidth = 1; c.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
+      c.save(); c.strokeStyle = tok.muted; c.globalAlpha = 0.5; c.lineWidth = 1;
+      c.beginPath();
+      for (let x = x0 + 8; x <= x1 - 8; x += 3) {
+        const y = y0 + 30 + Math.sin((x - x0) / 6) * 1.8;
+        if (x === x0 + 8) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.stroke(); c.restore();
+      c.font = '700 11px ' + FONT; c.fillStyle = tok.ink; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('reservoir, 300 K', (x0 + x1) / 2, y0 + 14);
+    }
+
+    function drawHeatArrows(c, now) {
+      if (!(anim && anim.began && anim.t < 1)) return;
+      const inward = anim.dir > 0;                // expanding: heat flows in
+      const col = inward ? tok['merc-hot'] : tok['merc-cold'];
+      const yGas = CYL.bottom - 46, yRes = CYL.bottom + CYL.wall + 28;
+      for (let i = 0; i < 3; i++) {
+        const ph = (((now - anim.start) / 900) + i / 3) % 1;
+        const x = CYL.x + CYL.w * (0.25 + 0.25 * i);
+        const y = inward ? lerp(yRes, yGas, ph) : lerp(yGas, yRes, ph);
+        const d = inward ? -1 : 1, L = 22;
+        c.save();
+        c.globalAlpha = Math.sin(Math.PI * ph);
+        c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(x, y - d * L / 2); c.lineTo(x, y + d * L / 2); c.stroke();
+        const tip = y + d * L / 2;
+        c.beginPath(); c.moveTo(x, tip); c.lineTo(x - 5, tip - d * 7); c.lineTo(x + 5, tip - d * 7); c.closePath(); c.fill();
+        c.restore();
+      }
+      c.font = '10px ' + FONT; c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.fillText(inward ? 'heat in' : 'heat out', CYL.x + CYL.w + CYL.wall + 18, CYL.bottom + CYL.wall + 22);
+    }
+
+    function drawThermo(c) {
+      const x = TH.x, w = TH.w, cx = x + w / 2, by = TH.bottom + TH.bulbR + 2;
+
+      c.font = '10px ' + FONT; c.fillStyle = tok.muted; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.fillText('T (K)', cx, TH.top - 20);
+
+      c.textAlign = 'right'; c.textBaseline = 'middle';
+      for (let T = TH.tmin; T <= TH.tmax; T += 10) {
+        const y = Math.round(tempY(T)) + 0.5;
+        const major = T % 20 === 0;
+        c.strokeStyle = tok.muted; c.lineWidth = 1; c.globalAlpha = major ? 0.9 : 0.5;
+        c.beginPath(); c.moveTo(x - (major ? 9 : 5), y); c.lineTo(x - 2, y); c.stroke();
+        c.globalAlpha = 1;
+        if (major) { c.fillStyle = tok.muted; c.fillText(String(T), x - 12, y); }
+      }
+
+      c.fillStyle = tok.panel; roundRect(c, x, TH.top - 10, w, TH.bottom - TH.top + 12, 7); c.fill();
+      c.strokeStyle = tok.glass; c.lineWidth = 1.5; c.stroke();
+      c.beginPath(); c.arc(cx, by, TH.bulbR, 0, Math.PI * 2); c.fillStyle = tok.panel; c.fill(); c.stroke();
+
+      const yT = tempY(clamp(cur.T, TH.tmin, TH.tmax));
+      c.fillStyle = mix(tok['merc-cold'], tok['merc-hot'], warmth());
+      c.fillRect(cx - 3.5, yT, 7, by - yT);
+      c.beginPath(); c.arc(cx, by, TH.bulbR - 4, 0, Math.PI * 2); c.fill();
+
+      if (iso) {
+        marker(c, T0, ['reservoir'], tok.muted, false);
+      } else {
+        marker(c, T0, ['start'], tok.muted, false);
+        marker(c, T_LIM, ['limit of many', 'tiny weights'], tok.rev, true);
+      }
+
+      c.font = '700 13px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = tok.ink;
+      c.fillText(cur.T.toFixed(1) + ' K', cx, by + TH.bulbR + 18);
+    }
+    function marker(c, T, lines, color, dashed) {
+      const y = Math.round(tempY(T)) + 0.5;
+      c.save();
+      c.strokeStyle = color; c.lineWidth = 1.2;
+      if (dashed) c.setLineDash([3, 3]);
+      c.beginPath(); c.moveTo(TH.x - 1, y); c.lineTo(TH.x + TH.w + 8, y); c.stroke();
+      c.setLineDash([]);
+      c.font = '10px ' + FONT; c.fillStyle = color; c.textAlign = 'left'; c.textBaseline = 'middle';
+      const lh = 11, yStart = y - (lines.length - 1) * lh / 2;
+      for (let i = 0; i < lines.length; i++) c.fillText(lines[i], TH.x + TH.w + 11, yStart + i * lh);
+      c.restore();
+    }
+
+    // ----- P–V diagram -----
+    function drawPV() {
+      const s = fit(pv, PW, PH);
+      const c = pctx;
+      c.setTransform(dpr * s, 0, 0, dpr * s, 0, 0);
+      c.clearRect(0, 0, PW, PH);
+      const L = PVG.l, R = PW - PVG.r, T = PVG.t, B = PH - PVG.b;
+
+      c.strokeStyle = tok.grid; c.lineWidth = 1;
+      c.font = '10px ' + FONT; c.fillStyle = tok.muted;
+      c.textAlign = 'center'; c.textBaseline = 'top';
+      for (let V = 1.0; V <= PVG.vlast + 1e-9; V += 0.2) {
+        const x = Math.round(vx(V)) + 0.5;
+        c.beginPath(); c.moveTo(x, T); c.lineTo(x, B); c.stroke();
+        c.fillText(V.toFixed(1), x, B + 5);
+      }
+      c.textAlign = 'right'; c.textBaseline = 'middle';
+      for (let P = 1.0; P <= 2.01; P += 0.5) {
+        const y = Math.round(pyy(P)) + 0.5;
+        c.beginPath(); c.moveTo(L, y); c.lineTo(R, y); c.stroke();
+        c.fillText(P.toFixed(1), L - 6, y);
+      }
+      c.strokeStyle = tok.line;
+      c.beginPath(); c.moveTo(L + 0.5, T); c.lineTo(L + 0.5, B + 0.5); c.lineTo(R, B + 0.5); c.stroke();
+
+      c.fillStyle = tok.ink; c.font = '11px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.fillText('V (L)', (L + R) / 2, PH - 6);
+      c.save(); c.translate(12, (T + B) / 2); c.rotate(-Math.PI / 2); c.fillText('P (atm)', 0, 0); c.restore();
+
+      // many-tiny-weights limit
+      c.save();
+      c.strokeStyle = tok.rev; c.lineWidth = 1.5; c.setLineDash([5, 4]);
+      c.beginPath();
+      const M = 60;
+      for (let i = 0; i <= M; i++) {
+        const V = V0 + (refVend - V0) * i / M, P = refCurve(V);
+        if (i === 0) c.moveTo(vx(V), pyy(P)); else c.lineTo(vx(V), pyy(P));
+      }
+      c.stroke();
+      c.restore();
+      const Vl = iso ? 1.55 : 1.3;
+      c.fillStyle = tok.rev; c.font = '10px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'top';
+      c.fillText('limit of many tiny weights', vx(Vl) + 10, pyy(refCurve(Vl)) - 16);
+
+      // the stepwise path actually taken
+      for (let i = 0; i < steps.length; i++) {
+        const st = steps[i];
+        const vEnd = (i === steps.length - 1 && anim && anim.began) ? cur.V : st.Vb;
+        c.save();
+        c.strokeStyle = tok.path; c.lineWidth = 1.5; c.setLineDash([2, 4]);
+        c.beginPath(); c.moveTo(vx(st.Va), pyy(st.Pa)); c.lineTo(vx(st.Va), pyy(st.Pb)); c.stroke();
+        c.restore();
+        c.strokeStyle = tok.path; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(vx(st.Va), pyy(st.Pb)); c.lineTo(vx(vEnd), pyy(st.Pb)); c.stroke();
+      }
+      c.fillStyle = tok.path;
+      for (let i = 0; i < steps.length; i++) {
+        c.beginPath(); c.arc(vx(steps[i].Va), pyy(steps[i].Pa), 3, 0, Math.PI * 2); c.fill();
+      }
+      if (!anim || !anim.began) { c.beginPath(); c.arc(vx(cur.V), pyy(cur.P), 3, 0, Math.PI * 2); c.fill(); }
+      c.beginPath(); c.arc(vx(cur.V), pyy(cur.P), 5, 0, Math.PI * 2);
+      c.fillStyle = tok.panel; c.fill(); c.strokeStyle = tok.path; c.lineWidth = 2; c.stroke();
+
+      c.fillStyle = tok.muted; c.font = '10px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'bottom';
+      c.fillText('start', vx(V0) + 7, pyy(P0) - 4);
+    }
+
+    // ----- readouts, status, controls -----
+    const lastText = new Map();
+    function setText(el, s) { if (el && lastText.get(el) !== s) { lastText.set(el, s); el.textContent = s; } }
+    function updateReadouts() {
+      setText(ro.T, cur.T.toFixed(1));
+      setText(ro.P, cur.P.toFixed(2));
+      setText(ro.V, cur.V.toFixed(2));
+      setText(ro.W, Wcum.toFixed(0));
+      if (ro.Q) setText(ro.Q, Wcum.toFixed(0));   // T never changes, so U never changes: Q = W
+    }
+    function updateStatus() {
+      const on = N - k;
+      let msg;
+      if (!iso) {
+        if (k === 0) msg = 'Press Play, or remove the weights one at a time.';
+        else if (k < N || anim) msg = 'Weight ' + k + ' of ' + N + ' lifted off: the gas expands against the lower pressure, does work, and cools.';
+        else msg = 'Done. ' + N + (N === 1 ? ' step' : ' steps') + ' ended at ' + stateAt(N).T.toFixed(1) +
+          ' K. If the same mass came off as many tiny weights, the gas would end at ' + T_LIM.toFixed(1) + ' K.';
+      } else {
+        if (steps.length === 0 && !anim) {
+          msg = 'Press Play for a full round trip, or add and remove weights yourself.';
+        } else if (k === 0 && !anim) {
+          const out = Math.max(0, -Wcum);
+          msg = 'Back to the starting pressure and volume. Over the loop, ' + out.toFixed(0) +
+            ' J of work was done on the gas and ' + out.toFixed(0) + ' J of heat flowed out to the reservoir.';
+        } else if (lastDir > 0) {
+          msg = 'Weight lifted off (' + on + ' of ' + N + ' left): the gas expands and does work. Heat flows in from the reservoir, so the temperature holds at 300 K.';
+        } else {
+          msg = 'Weight added (' + on + ' of ' + N + ' on): the gas is squeezed and work is done on it. Heat flows out to the reservoir, so the temperature holds at 300 K.';
+        }
+      }
+      setText(statusEl, msg);
+      setText(ro.N, on + ' on the piston');
+      btnRemove.disabled = playing || k >= N;
+      if (btnAdd) btnAdd.disabled = playing || k <= 0;
+      let label;
+      if (playing) label = 'Pause';
+      else if (!iso) label = (k >= N) ? 'Replay' : 'Play';
+      else label = (k === 0 && steps.length > 0 && !anim) ? 'Replay' : 'Play';
+      setText(btnPlay, label);
+      segBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(parseInt(b.getAttribute('data-n'), 10) === N)); });
+    }
+
+    function recordStep() {
+      cur.P = anim.to.P;
+      steps.push({ Va: anim.from.V, Pa: anim.from.P, Pb: anim.to.P, Vb: anim.to.V });
+      anim.began = true;
+    }
+    function finishAnim() {
+      if (!anim.began) recordStep();
+      cur.T = anim.to.T; cur.V = anim.to.V; cur.P = anim.to.P;
+      Wcum = Wbase + anim.to.P * (anim.to.V - anim.from.V) * ATM_L_J;
+      anim = null;
+    }
+    function doStep(dir) {
+      const kNew = k + dir;
+      if (kNew < 0 || kNew > N) return;
+      if (anim) finishAnim();
+      const from = stateAt(k), to = stateAt(kNew);
+      const dur = N === 1 ? 1800 : (N <= 4 ? 1400 : (N <= 8 ? 1000 : 650));
+      const flyDur = Math.min(650, dur * 0.6);
+      const now = performance.now();
+      anim = {
+        from: from, to: to, dir: dir, t: 0, began: false,
+        flyStart: now, flyDur: flyDur,
+        start: now + (dir < 0 ? flyDur : 0), dur: dur,   // an added weight has to land before the gas responds
+        flyTop: pistonY(from.V) - PIST_H,
+        fly: dir > 0 ? N - kNew : N - kNew - 1
+      };
+      Wbase = Wcum;
+      lastDir = dir;
+      k = kNew;
+      updateStatus();
+    }
+    function onAnimDone() {
+      if (playing) {
+        let next = null, pause = N <= 4 ? 700 : (N <= 8 ? 450 : 300);
+        if (playDir > 0) {
+          if (k < N) next = 1;
+          else if (iso) { playDir = -1; next = -1; pause = 1100; }
+        } else if (k > 0) {
+          next = -1;
+        }
+        if (next !== null) {
+          playTimer = setTimeout(function () { playTimer = null; if (playing) doStep(next); }, pause);
+        } else {
+          playing = false;
+        }
+      }
+      updateStatus();
+    }
+    function stopPlay() {
+      playing = false;
+      if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+    }
+    function reset() {
+      stopPlay();
+      anim = null; k = 0; steps = []; Wcum = 0; Wbase = 0; lastDir = 1;
+      const s0 = stateAt(0);
+      cur = { P: s0.P, T: s0.T, V: s0.V };
+      initParts();
+      updateStatus();
+    }
+    function setN(n) { N = n; if (!iso) states = computeStates(N); reset(); }
+
+    btnPlay.addEventListener('click', function () {
+      if (playing) { stopPlay(); updateStatus(); return; }
+      if (!iso && k >= N) reset();
+      if (iso && k === 0 && steps.length > 0 && !anim) reset();
+      playDir = (k < N) ? 1 : -1;
+      playing = true;
+      updateStatus();
+      if (!anim) doStep(playDir);
+    });
+    btnRemove.addEventListener('click', function () { if (!playing) doStep(1); });
+    if (btnAdd) btnAdd.addEventListener('click', function () { if (!playing) doStep(-1); });
+    btnReset.addEventListener('click', reset);
+    segBtns.forEach(function (b) {
+      b.addEventListener('click', function () { setN(parseInt(b.getAttribute('data-n'), 10)); });
+    });
+
+    function tick(now, dt) {
+      if (anim) {
+        if (!anim.began && now >= anim.start) recordStep();
+        if (anim.began) {
+          const t = clamp((now - anim.start) / anim.dur, 0, 1), e = easeOut(t);
+          anim.t = t;
+          cur.T = lerp(anim.from.T, anim.to.T, e);
+          cur.V = lerp(anim.from.V, anim.to.V, e);
+          Wcum = Wbase + anim.to.P * (cur.V - anim.from.V) * ATM_L_J;
+          if (t >= 1) { finishAnim(); onAnimDone(); }
+        }
+      }
+      stepParts(dt);
+      if (!root.hidden) { drawRig(now); drawPV(); updateReadouts(); }
+    }
+    function pause() { stopPlay(); updateStatus(); }
+
+    setN(4);
+    updateReadouts();
+    return { tick: tick, pause: pause };
+  }
+
+  // ---------- tabs ----------
+  const tabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role="tab"]'));
+  const panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+  const sims = panels.map(function (p) { return makeSim(p, p.getAttribute('data-mode')); });
+  function selectTab(i) {
+    tabs.forEach(function (t, j) {
+      t.setAttribute('aria-selected', String(i === j));
+      panels[j].hidden = i !== j;
+      if (i !== j) sims[j].pause();
+    });
+    try { history.replaceState(null, '', '#' + panels[i].id); } catch (e) { /* ignore */ }
+  }
+  tabs.forEach(function (t, i) { t.addEventListener('click', function () { selectTab(i); }); });
+  let initial = 0;
+  for (let i = 0; i < panels.length; i++) if ('#' + panels[i].id === location.hash) initial = i;
+  selectTab(initial);
+
+  // ---------- main loop ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    readTokens();
+    for (let i = 0; i < sims.length; i++) sims[i].tick(now, dt);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
