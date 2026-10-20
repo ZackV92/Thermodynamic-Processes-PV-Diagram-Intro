@@ -429,7 +429,7 @@
     }
     function stepParts(dt) {
       const py = pistonY(cur.V);
-      const f = reduceMotion ? 0 : Math.sqrt(cur.T / T0);
+      const f = Math.sqrt(cur.T / T0);
       const x0 = CYL.x + PR, x1 = CYL.x + CYL.w - PR, y0 = py + PR, y1 = CYL.bottom - PR;
       for (let i = 0; i < parts.length; i++) {
         const p = parts[i], v = p.s * f;
